@@ -62,10 +62,39 @@ def scan_port(target, port, timeout=1.0):
         s.connect((target, port))
         
         banner = None
+        data_str = ""
+
+        # attempt to grab initial banner
         try:
-            banner = s.recv(1024).decode().strip()
+            s.settimeout(0.5)
+            data = s.recv(1024)
+            if data:
+                data_str += data.decode(errors='ignore')
         except:
             pass
+            
+        if "mysql" not in data_str.lower():
+            try:
+                msg = f"HEAD / HTTP/1.1\r\nHost: {target}\r\n\r\n"
+                s.sendall(msg.encode())
+                s.settimeout(0.5)
+                data = s.recv(1024)
+                if data:
+                    data_str += data.decode(errors='ignore')
+            except:
+                pass
+
+        lower_data = data_str.lower()
+        if "mysql" in lower_data:
+            banner = "mysql"
+        elif "ssh" in lower_data:
+            banner = "ssh"
+        elif "http" in lower_data:
+            banner = "http"
+        elif "html" in lower_data: 
+             banner = "http"
+        elif data_str:
+            banner = data_str.strip()
 
         end_time = time.perf_counter()
         elapsed_time = (end_time - start_time)
