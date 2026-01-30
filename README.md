@@ -96,9 +96,12 @@ Create a custom port scanning tool that can:
 - Handle errors gracefully (timeouts, connection refused, etc.) ✅  
 - Service/banner detection - Identify what service is running on each port ✅ (only if the service responds with a banner)  
 
+A note about service discovery:
+Service discovery does not always work. Some services like HTTP would require guessing by specifically sending formatted requests (multiple different types) instead of just TCP handshakes. I didn't want to substantially slow down and overengineer the scanner by brute forcing many request formats, which is why service discovery simply relies on banner detection.
+
 **Advanced Features (bonus points):**
 - Multi-threading for faster scans
-- Scan multiple hosts
+- Scan multiple hosts ✅  
 - Different verbosity / display levels ✅  
 - Output formats (JSON, CSV, formatted text) ✅  
 - Stealth/timing options

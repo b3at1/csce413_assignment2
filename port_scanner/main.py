@@ -27,9 +27,19 @@ import csv
 from datetime import datetime
 
 USAGE_INFO = '''
-Usage:   python3 port_scanner_template.py <target> <optional: start_port end_port> <optional: verbose> <optional: output_format>
-Example: python3 port_scanner_template.py 172.20.0.10 1 1024 1 json
-Supported formats: html, csv, txt, json
+------------------------------------------------------------
+Usage:   python3 port_scanner_template.py <target (OPTIONAL CIDR NOTATION)> <optional: start_port end_port> <optional: verbose> <optional: output_format>
+Example: python3 port_scanner_template.py 172.20.0.0/24 1 1024 0 json
+
+
+ARGUMENTS:
+target: IP address or CIDR notation (e.g., 192.168.0.0/24)
+(optional) start_port: Starting port number (default: 1)
+(optional) end_port: Ending port number (default: 1024)
+(optional) verbose: 0 (only open ports) or 1 (all ports) (default: 1)
+(optional) output_format: Format to save results (default: None) supports html, csv, txt, json
+------------------------------------------------------------
+
 '''
 
 
@@ -43,7 +53,7 @@ def scan_port(target, port, timeout=1.0):
         timeout (float): Connection timeout in seconds
 
     Returns:
-        tuple: (port, status, time, banner)
+        tuple: (target_ip, port, status, time, banner)
     """
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -61,18 +71,18 @@ def scan_port(target, port, timeout=1.0):
         elapsed_time = (end_time - start_time)
         elapsed_time = round(elapsed_time, 4) # round to 4 decimal places
         s.close()
-        return (port, 1, elapsed_time, banner)
+        return (target, port, 1, elapsed_time, banner)
 
     except (socket.timeout, ConnectionRefusedError, OSError):
-        return (port, 0, timeout, None)
+        return (target, port, 0, timeout, None)
 
 
-def scan_range(target, start_port, end_port):
+def scan_range(targets, start_port, end_port):
     """
-    Scan a range of ports on the target host
+    Scan a range of ports on the target hosts
 
     Args:
-        target (str): IP address or hostname to scan
+        targets (list): List of IP addresses to scan
         start_port (int): Starting port number
         end_port (int): Ending port number
 
@@ -81,39 +91,39 @@ def scan_range(target, start_port, end_port):
     """
     ports = []
 
-    print(f"[*] Scanning {target} from port {start_port} to {end_port}")
-    print(f"[*] This may take a while...")
+    for target in targets:
+        print(f"[*] Scanning {target} from port {start_port} to {end_port}")
 
-    for port in range(start_port, end_port + 1):
-        scan_result = scan_port(target, port)
-        ports.append(scan_result)
-        result = scan_result[1]
-        if result == 1:
-            print(f"[+] Port {port} is open")
+        for port in range(start_port, end_port + 1):
+            scan_result = scan_port(target, port, 0.001)
+            ports.append(scan_result)
+            result = scan_result[2]
+            if result == 1:
+                print(f"[+] {target} Port {port} is open")
 
     return ports
 
 def display_results(ports, verbose=1, output_format=None):
     open_count = 0
     for port in ports:
-        if port[1] == 1:
+        if port[2] == 1:
             open_count += 1
             
     # Filter ports based on verbose
     filtered_ports = ports
     if verbose == 0:
-        filtered_ports = [p for p in ports if p[1] == 1]
+        filtered_ports = [p for p in ports if p[2] == 1]
     
     if output_format is None:
         print(f"[+] Found {open_count} open ports")
         for port in filtered_ports:
-            if port[1] == 1:
+            if port[2] == 1:
                 port_status = "open"
             else:
                 port_status = "closed"
             
-            banner_val = port[3] if (len(port) > 3 and port[3]) else "null"
-            print(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds) | Service: {banner_val}")
+            banner_val = port[4] if (len(port) > 4 and port[4]) else "null"
+            print(f"Target: {port[0]} | Port {port[1]}: {port_status} (scanned in {port[3]:.4f} seconds) | Service: {banner_val}")
     else:
         if not os.path.exists("SCANS"):
             os.makedirs("SCANS")
@@ -126,13 +136,13 @@ def display_results(ports, verbose=1, output_format=None):
                 if output_format == "txt":
                     f.write(f"[+] Found {open_count} open ports\n")
                     for port in filtered_ports:
-                        if port[1] == 1:
+                        if port[2] == 1:
                             port_status = "open"
                         else:
                             port_status = "closed"
                         
-                        banner_val = port[3] if (len(port) > 3 and port[3]) else "null"
-                        f.write(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds) | Service: {banner_val}\n")
+                        banner_val = port[4] if (len(port) > 4 and port[4]) else "null"
+                        f.write(f"Target: {port[0]} | Port {port[1]}: {port_status} (scanned in {port[3]:.4f} seconds) | Service: {banner_val}\n")
                         
                 elif output_format == "html":
                     f.write("<html><body>\n")
@@ -140,32 +150,33 @@ def display_results(ports, verbose=1, output_format=None):
                     f.write(f"<p>Found {open_count} open ports</p>\n")
                     f.write("<ul>\n")
                     for port in filtered_ports:
-                        if port[1] == 1:
+                        if port[2] == 1:
                             port_status = "open"
                         else:
                             port_status = "closed"
                             
-                        banner_val = port[3] if (len(port) > 3 and port[3]) else "null"
-                        f.write(f"<li>Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds) | Service: {banner_val}</li>\n")
+                        banner_val = port[4] if (len(port) > 4 and port[4]) else "null"
+                        f.write(f"<li>Target: {port[0]} | Port {port[1]}: {port_status} (scanned in {port[3]:.4f} seconds) | Service: {banner_val}</li>\n")
                     f.write("</ul>\n</body></html>")
                     
                 elif output_format == "csv":
                     writer = csv.writer(f)
-                    writer.writerow(["Port", "Status", "Time", "Banner"])
+                    writer.writerow(["Target", "Port", "Status", "Time", "Banner"])
                     for port in filtered_ports:
-                        status = "open" if port[1] == 1 else "closed"
-                        banner = port[3] if (len(port) > 3 and port[3]) else "null"
-                        writer.writerow([port[0], status, port[2], banner])
+                        status = "open" if port[2] == 1 else "closed"
+                        banner = port[4] if (len(port) > 4 and port[4]) else "null"
+                        writer.writerow([port[0], port[1], status, port[3], banner])
                         
                 elif output_format == "json":
                     data = []
                     for port in filtered_ports:
-                        status = "open" if port[1] == 1 else "closed"
-                        banner = port[3] if len(port) > 3 else None
+                        status = "open" if port[2] == 1 else "closed"
+                        banner = port[4] if len(port) > 4 else None
                         data.append({
-                            "port": port[0],
+                            "target": port[0],
+                            "port": port[1],
                             "status": status,
-                            "time": port[2],
+                            "time": port[3],
                             "banner": banner
                         })
                     json.dump(data, f, indent=4)
@@ -226,19 +237,30 @@ def main(target=None, start_port=1, end_port=1024, verbose=1, output_format=None
     if target is None:
         print(USAGE_INFO)
         sys.exit(1)
-            
+        
+    targets = []
     try:
-        ipaddress.ip_address(target)
+        # Check if CIDR
+        try:
+             ip = ipaddress.ip_address(target)
+             targets.append(str(ip))
+        except ValueError:
+             network = ipaddress.ip_network(target, strict=False)
+             for ip in network.hosts():
+                 targets.append(str(ip))
+             if not targets and network.num_addresses == 1:
+                 targets.append(str(network.network_address))
+             # If it's a CIDR that yielded hosts, we are good.
+
     except ValueError:
-        print(f"Invalid IP address: {target}")
+        print(f"Invalid IP address or CIDR: {target}")
         sys.exit(1)
+
     if(start_port < 1 or end_port > 65535 or start_port > end_port):
         print("Invalid port range. Ports must be between 1 and 65535.")
         sys.exit(1)
 
-    print(f"[*] Starting port scan on {target}")
-
-    ports = scan_range(target, start_port, end_port)
+    ports = scan_range(targets, start_port, end_port)
 
     print(f"\n[+] Scan complete!")
     display_results(ports, verbose, output_format)
