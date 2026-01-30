@@ -21,10 +21,15 @@ import socket
 import sys
 import time
 import ipaddress
+import os
+import json
+import csv
+from datetime import datetime
 
 USAGE_INFO = '''
-Usage:   python3 port_scanner_template.py <target>
-Example: python3 port_scanner_template.py 172.20.0.10
+Usage:   python3 port_scanner_template.py <target> <optional: start_port end_port> <optional: verbose> <optional: output_format>
+Example: python3 port_scanner_template.py 172.20.0.10 1 1024 1 json
+Supported formats: html, csv, txt, json
 '''
 
 
@@ -46,7 +51,8 @@ def scan_port(target, port, timeout=1.0):
         start_time = time.perf_counter()
         s.connect((target, port))
         end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
+        elapsed_time = (end_time - start_time)
+        elapsed_time = round(elapsed_time, 4) # round to 4 decimal places
         s.close()
         return (port, 1, elapsed_time)
 
@@ -80,22 +86,130 @@ def scan_range(target, start_port, end_port):
 
     return ports
 
-def main(target=None, start_port=1, end_port=1024): # Scan first 1024 ports by default
+def display_results(ports, verbose=1, output_format=None):
+    open_count = 0
+    for port in ports:
+        if port[1] == 1:
+            open_count += 1
+            
+    # Filter ports based on verbose
+    filtered_ports = ports
+    if verbose == 0:
+        filtered_ports = [p for p in ports if p[1] == 1]
+    
+    if output_format is None:
+        print(f"[+] Found {open_count} open ports")
+        for port in filtered_ports:
+            if port[1] == 1:
+                port_status = "open"
+            else:
+                port_status = "closed"
+            print(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds)")
+    else:
+        if not os.path.exists("SCANS"):
+            os.makedirs("SCANS")
+        
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"SCANS/{timestamp}_port_scan.{output_format}"
+        
+        try:
+            with open(filename, "w") as f:
+                if output_format == "txt":
+                    f.write(f"[+] Found {open_count} open ports\n")
+                    for port in filtered_ports:
+                        if port[1] == 1:
+                            port_status = "open"
+                        else:
+                            port_status = "closed"
+                        f.write(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds)\n")
+                        
+                elif output_format == "html":
+                    f.write("<html><body>\n")
+                    f.write(f"<h1>Scan Results</h1>\n")
+                    f.write(f"<p>Found {open_count} open ports</p>\n")
+                    f.write("<ul>\n")
+                    for port in filtered_ports:
+                        if port[1] == 1:
+                            port_status = "open"
+                        else:
+                            port_status = "closed"
+                        f.write(f"<li>Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds)</li>\n")
+                    f.write("</ul>\n</body></html>")
+                    
+                elif output_format == "csv":
+                    writer = csv.writer(f)
+                    writer.writerow(["Port", "Status", "Time"])
+                    for port in filtered_ports:
+                        status = "open" if port[1] == 1 else "closed"
+                        writer.writerow([port[0], status, port[2]])
+                        
+                elif output_format == "json":
+                    data = []
+                    for port in filtered_ports:
+                        status = "open" if port[1] == 1 else "closed"
+                        data.append({
+                            "port": port[0],
+                            "status": status,
+                            "time": port[2]
+                        })
+                    json.dump(data, f, indent=4)
+                    
+            print(f"[+] Results saved to {filename}")
+        except Exception as e:
+            print(f"[-] Error saving results: {e}")
+
+
+def main(target=None, start_port=1, end_port=1024, verbose=1, output_format=None): # Scan first 1024 ports by default
     """Main function"""
-    if target is None:
-        if len(sys.argv) < 2:
+    MAX_ARGS = 6 # the maximum number of arguments allowed (target + start + end + verbose + format + script_name)
+    
+    if target is None and len(sys.argv) > 1:
+        args = sys.argv[1:]
+        
+        # if unrecognized format, just do normal print
+        if args[-1] in ["html", "csv", "txt", "json"]:
+            output_format = args.pop()
+            
+        if len(args) == 0:
             print(USAGE_INFO)
             sys.exit(1)
             
-        target = sys.argv[1]
+        target = args[0]
         
-        if len(sys.argv) >= 4:
+        if len(args) == 2:
+            # target verbose
             try:
-                start_port = int(sys.argv[2])
-                end_port = int(sys.argv[3])
+                verbose = int(args[1])
+            except ValueError:
+                print("Verbose must be an integer.")
+                sys.exit(1)
+                
+        elif len(args) == 3:
+            # target start end
+            try:
+                start_port = int(args[1])
+                end_port = int(args[2])
             except ValueError:
                 print("Ports must be integers.")
                 sys.exit(1)
+                
+        elif len(args) == 4:
+            # target start end verbose
+            try:
+                start_port = int(args[1])
+                end_port = int(args[2])
+                verbose = int(args[3])
+            except ValueError:
+                print("Ports/Verbose must be integers.")
+                sys.exit(1)
+        
+        elif len(args) > 4:
+            print(USAGE_INFO)
+            sys.exit(1)
+
+    if target is None:
+        print(USAGE_INFO)
+        sys.exit(1)
             
     try:
         ipaddress.ip_address(target)
@@ -111,13 +225,8 @@ def main(target=None, start_port=1, end_port=1024): # Scan first 1024 ports by d
     ports = scan_range(target, start_port, end_port)
 
     print(f"\n[+] Scan complete!")
-    # TODO: Display results
-    for port in ports:
-        if port[1] == 1:
-            port_status = "open"
-        else:
-            port_status = "closed"
-        print(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds)")
+    display_results(ports, verbose, output_format)
+
 
 
 if __name__ == "__main__":
