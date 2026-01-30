@@ -90,16 +90,17 @@ docker compose down -v
 Create a custom port scanning tool that can:
 
 **Minimum Requirements:**
-- Accept target IP/hostname and port range as arguments
-- Perform TCP connect scans to detect open ports
-- Display results showing port number, state (open/closed), and timing
-- Handle errors gracefully (timeouts, connection refused, etc.)
-- Service/banner detection - Identify what service is running on each port
+- Accept target IP/hostname and port range as arguments ✅  
+- Perform TCP connect scans to detect open ports ✅  
+- Display results showing port number, state (open/closed), and timing ✅  
+- Handle errors gracefully (timeouts, connection refused, etc.) ✅  
+- Service/banner detection - Identify what service is running on each port ✅ (only if the service responds with a banner)  
 
 **Advanced Features (bonus points):**
 - Multi-threading for faster scans
 - Scan multiple hosts
-- Output formats (JSON, CSV, formatted text)
+- Different verbosity / display levels ✅  
+- Output formats (JSON, CSV, formatted text) ✅  
 - Stealth/timing options
 - etc...
 

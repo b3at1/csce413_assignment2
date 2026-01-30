@@ -43,21 +43,28 @@ def scan_port(target, port, timeout=1.0):
         timeout (float): Connection timeout in seconds
 
     Returns:
-        bool: True if port is open, False otherwise
+        tuple: (port, status, time, banner)
     """
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(timeout)
         start_time = time.perf_counter()
         s.connect((target, port))
+        
+        banner = None
+        try:
+            banner = s.recv(1024).decode().strip()
+        except:
+            pass
+
         end_time = time.perf_counter()
         elapsed_time = (end_time - start_time)
         elapsed_time = round(elapsed_time, 4) # round to 4 decimal places
         s.close()
-        return (port, 1, elapsed_time)
+        return (port, 1, elapsed_time, banner)
 
     except (socket.timeout, ConnectionRefusedError, OSError):
-        return (port, 0, timeout)
+        return (port, 0, timeout, None)
 
 
 def scan_range(target, start_port, end_port):
@@ -104,7 +111,9 @@ def display_results(ports, verbose=1, output_format=None):
                 port_status = "open"
             else:
                 port_status = "closed"
-            print(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds)")
+            
+            banner_val = port[3] if (len(port) > 3 and port[3]) else "null"
+            print(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds) | Service: {banner_val}")
     else:
         if not os.path.exists("SCANS"):
             os.makedirs("SCANS")
@@ -121,7 +130,9 @@ def display_results(ports, verbose=1, output_format=None):
                             port_status = "open"
                         else:
                             port_status = "closed"
-                        f.write(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds)\n")
+                        
+                        banner_val = port[3] if (len(port) > 3 and port[3]) else "null"
+                        f.write(f"Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds) | Service: {banner_val}\n")
                         
                 elif output_format == "html":
                     f.write("<html><body>\n")
@@ -133,24 +144,29 @@ def display_results(ports, verbose=1, output_format=None):
                             port_status = "open"
                         else:
                             port_status = "closed"
-                        f.write(f"<li>Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds)</li>\n")
+                            
+                        banner_val = port[3] if (len(port) > 3 and port[3]) else "null"
+                        f.write(f"<li>Port {port[0]}: {port_status} (scanned in {port[2]:.4f} seconds) | Service: {banner_val}</li>\n")
                     f.write("</ul>\n</body></html>")
                     
                 elif output_format == "csv":
                     writer = csv.writer(f)
-                    writer.writerow(["Port", "Status", "Time"])
+                    writer.writerow(["Port", "Status", "Time", "Banner"])
                     for port in filtered_ports:
                         status = "open" if port[1] == 1 else "closed"
-                        writer.writerow([port[0], status, port[2]])
+                        banner = port[3] if (len(port) > 3 and port[3]) else "null"
+                        writer.writerow([port[0], status, port[2], banner])
                         
                 elif output_format == "json":
                     data = []
                     for port in filtered_ports:
                         status = "open" if port[1] == 1 else "closed"
+                        banner = port[3] if len(port) > 3 else None
                         data.append({
                             "port": port[0],
                             "status": status,
-                            "time": port[2]
+                            "time": port[2],
+                            "banner": banner
                         })
                     json.dump(data, f, indent=4)
                     
