@@ -244,22 +244,22 @@ Port knocking is a security technique where a port is kept closed by a firewall 
 **Requirements:**
 
 Your implementation must:
-1. **Choose a service to protect** (e.g., the SSH server on port 2222)
-2. **Define a knock sequence** - A series of ports that must be "knocked" in order (e.g., 1234, 5678, 9012)
+1. **Choose a service to protect** (e.g., the SSH server on port 2222) ✅ 
+2. **Define a knock sequence** - A series of ports that must be "knocked" in order (e.g., 1234, 5678, 9012) ✅ 
 3. **Implement the server-side**:
-   - Monitor for incoming connections on the knock ports
-   - Verify the sequence is correct
-   - Dynamically open the protected port using firewall rules (iptables/nftables)
-   - Optional: Add timing constraints (sequence must complete within X seconds)
-   - Optional: Reset on incorrect sequence
+   - Monitor for incoming connections on the knock ports ✅ 
+   - Verify the sequence is correct ✅ 
+   - Dynamically open the protected port using firewall rules (iptables/nftables) ✅ 
+   - Optional: Add timing constraints (sequence must complete within X seconds) ✅ 
+   - Optional: Reset on incorrect sequence ✅ 
 4. **Implement the client-side**:
-   - A script or tool to perform the knock sequence
-   - Connect to the protected service after knocking
+   - A script or tool to perform the knock sequence ✅ 
+   - Connect to the protected service after knocking ✅ 
 
 **Implementation Options:**
 
 - **Option A:** Use existing tools like `knockd` (https://github.com/jvinet/knock)
-- **Option B:** Implement from scratch in Python/Bash
+- **Option B:** Implement from scratch in Python/Bash ✅ 
 - **Option C:** Use iptables `recent` module for stateless implementation
 
 **Deliverable:**
@@ -269,7 +269,7 @@ Create a `port_knocking/` directory containing:
 - `knock_server.py` or `knockd.conf` - Server-side implementation
 - `knock_client.py` or `knock_client.sh` - Client to perform knock sequence
 - `Dockerfile` - Containerized version of your implementation
-- `demo.sh` - Script demonstrating the port knocking in action
+- `demo.py` - Script demonstrating the port knocking in action
 
 **Testing:**
 ```bash

@@ -5,12 +5,13 @@ import subprocess
 
 # NOTE: this file is used in lieu of demo.sh for easier interoperability
 # NOTE: sshpass must be installed for this demo to do automated ssh login
-
+# NOTE: knock_server.py was moved to the ssh container to operate properly
 def attempt_ssh(ip, user, protected_port, password):
     try:
         cmd = [
             "sshpass", "-p", password,
             "ssh", "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
             "-p", str(protected_port),
             f"{user}@{ip}"
         ]

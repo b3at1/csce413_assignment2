@@ -4,8 +4,9 @@
 import argparse
 import logging
 import socket
+import select
 import time
-from os import subprocess
+import subprocess
 
 DEFAULT_KNOCK_SEQUENCE = [1234, 5678, 9012]
 DEFAULT_PROTECTED_PORT = 2222
@@ -47,16 +48,75 @@ def listen_for_knocks(sequence, window_seconds, protected_port):
     logger = logging.getLogger("KnockServer")
     logger.info("Listening for knocks: %s", sequence)
     logger.info("Protected port: %s", protected_port)
+    
+    ip_states = {}
+    sockets = []
+    sock_map = {}
+    bound_ports = set()
+    
+    try:
+        for port in sequence:
+            if port in bound_ports:
+                continue
+            
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(('0.0.0.0', port))
+                s.listen(5)
+                sockets.append(s)
+                sock_map[s] = port
+                bound_ports.add(port)
+                logger.info("Listening on port %d", port)
+            except OSError as e:
+                logger.error("Failed to bind port %d: %s", port, e)
+                # Close already opened sockets
+                for s in sockets:
+                    s.close()
+                return
 
-    # TODO: Create TCP listeners for each knock port.
-    # TODO: Track each source IP and its progress through the sequence.
-    # TODO: Enforce timing window per sequence.
-    # TODO: On correct sequence, call change_protected_port() to open the port.
-    # TODO: On incorrect sequence, reset progress
-    # TODO: On exit, ensure protected port is closed.
-
-    while True:
-        time.sleep(1)
+        while True:
+            readable, _, _ = select.select(sockets, [], [], 1.0)
+            
+            for s in readable:
+                conn, addr = s.accept()
+                ip = addr[0]
+                conn.close()
+                
+                knocked_port = sock_map[s]
+                logger.info("Knock from %s on port %d", ip, knocked_port)
+                
+                now = time.time()
+                state = ip_states.get(ip, {'index': 0, 'last_time': 0})
+                
+                # Check window timeout if strictly progressing
+                if state['index'] > 0 and (now - state['last_time'] > window_seconds):
+                    logger.info("Window expired for %s. Resetting.", ip)
+                    state['index'] = 0
+                
+                # Check against expected port
+                expected = sequence[state['index']]
+                if knocked_port == expected:
+                    state['index'] += 1
+                    state['last_time'] = now
+                    logger.info("Correct knock (%d/%d) for %s", state['index'], len(sequence), ip)
+                    
+                    if state['index'] == len(sequence):
+                        logger.info("Sequence complete for %s. Opening protected port.", ip)
+                        change_protected_port(protected_port, open=True)
+                        state['index'] = 0
+                else:
+                    logger.info("Incorrect knock for %s (got %d, expected %d). Resetting.", ip, knocked_port, expected)
+                    state['index'] = 0
+                
+                ip_states[ip] = state
+                
+    except KeyboardInterrupt:
+        logger.info("Stopping knock server...")
+    finally:
+        logger.info("Closing knocking sockets...")
+        for s in sockets:
+            s.close()
 
 
 def parse_args():
@@ -90,8 +150,10 @@ def main():
     except ValueError:
         raise SystemExit("Invalid sequence. Use comma-separated integers.")
 
-    listen_for_knocks(sequence, args.window, args.protected_port)
-
+    try:
+        listen_for_knocks(sequence, args.window, args.protected_port)
+    finally:
+        change_protected_port(args.protected_port, open=False)
 
 if __name__ == "__main__":
     main()

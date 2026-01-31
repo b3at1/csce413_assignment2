@@ -1,8 +1,8 @@
 FROM ubuntu:22.04
 
-# Install OpenSSH server
+# Install OpenSSH server, python3, and iptables
 RUN apt-get update && \
-    apt-get install -y openssh-server && \
+    apt-get install -y openssh-server python3 iptables && \
     rm -rf /var/lib/apt/lists/*
 
 # Create the SSH run directory
@@ -30,11 +30,14 @@ RUN echo '#!/bin/bash' > /home/sshuser/.bashrc && \
     echo 'export PS1="\[\033[01;32m\]sshuser@secret-server\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "' >> /home/sshuser/.bashrc
 
 # Copy SSH configuration and banner
-COPY sshd_config /etc/ssh/sshd_config
-COPY banner /etc/ssh/banner
+COPY secret_ssh/sshd_config /etc/ssh/sshd_config
+COPY secret_ssh/banner /etc/ssh/banner
+# required for the port knocking to work properly
+COPY port_knocking/knock_server.py /usr/local/bin/knock_server.py
+COPY secret_ssh/start.sh /usr/local/bin/start.sh 
 
 # Expose SSH on port 2222 (non-standard port - students must discover this)
 EXPOSE 2222
 
 # Start SSH server
-CMD ["/usr/sbin/sshd", "-D", "-p", "2222"]
+CMD ["/usr/local/bin/start.sh"]
