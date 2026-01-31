@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# NOTE: THIS FILE IS UNUSED, I AM USING demo.py for the demo!!!
 set -euo pipefail
 
 TARGET_IP=${1:-172.20.0.40}

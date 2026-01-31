@@ -107,3 +107,7 @@ The impact of an MITM attack is severe, as it grants an attacker complete visibi
 <div style="page-break-after: always;"></div>
 
 # 6. Conclusion
+## Attributions
+Agentic AI (Gemini 3 Pro) was utilized to tweak and restructure scripts, additionally, the following chats were created:
+https://gemini.google.com/share/8dcbdf405d14
+https://gemini.google.com/share/e0d2f0bb0b89
