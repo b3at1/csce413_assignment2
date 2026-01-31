@@ -3,41 +3,35 @@ import sys
 import socket
 import subprocess
 
-def check_port(ip, port):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(0.01)
-        result = sock.connect((ip, port))
-        sock.close()
-        
-        if result == 0:
-            print(f"[+] Connection to {ip} {port} port succeeded!")
-            return True
-        else:
-            print(f"[-] Connection to {ip} {port} port failed.")
-            return False
-    except Exception:
-        return False
-
+# NOTE: this file is used in lieu of demo.sh for easier interoperability
+# NOTE: sshpass must be installed for this demo to do automated ssh login
 
 def attempt_ssh(ip, user, protected_port, password):
-    if not check_port(ip, protected_port):
-        print(f"[-] SSH connection to {user}@{ip}:{protected_port} failed.")
-    else:
-        try:
-            cmd = [
-                "sshpass", "-p", password,
-                "ssh", "-o", "StrictHostKeyChecking=no",
-                f"{user}@{ip} -p {protected_port}"
-            ]
-            ret_code = subprocess.call(cmd)
-            if ret_code != 0:
-                print(f"SSH command exited with error code {ret_code}.")
-        except FileNotFoundError:
-            print("Error: 'sshpass' is not installed or not in PATH.")
-            sys.exit(1)
+    try:
+        cmd = [
+            "sshpass", "-p", password,
+            "ssh", "-o", "StrictHostKeyChecking=no",
+            "-p", str(protected_port),
+            f"{user}@{ip}"
+        ]
+        ret_code = subprocess.call(cmd)
+        if ret_code != 0:
+            print(f"[-] SSH connection to {user}@{ip}:{protected_port} failed.")
+            print(f"SSH command exited with error code {ret_code}.")
+        else:
+            print(f"[+] SSH connection to {user}@{ip}:{protected_port} succeeded.")
+    except FileNotFoundError:
+        print("Error: 'sshpass' is not installed or not in PATH.")
+        sys.exit(1)
 def main():
     # 1. Handle Arguments (mimicking ${1:-default})
+    '''
+    DEFAULT_TARGET_IP = "172.20.0.20"
+    DEFAULT_KNOCK_SEQUENCE = [1234, 5678, 9012]
+    DEFAULT_PROTECTED_PORT = 2222
+    DEFAULT_DELAY = 0.3
+    '''
+
     if len(sys.argv) != 4:
         print("[+] Usage: demo.py [TARGET_IP] [PORT1,PORT2,PORT3] [PROTECTED_PORT]")
         sys.exit(1)
@@ -61,12 +55,12 @@ def main():
    
     print(f"[+] Sending knock sequence: {sequence}")
     
-    # We call the external script exactly as shown in the bash script
+    # call the client script to perform the knock sequence
     knock_cmd = [
         sys.executable, "knock_client.py",
         "--target", target_ip,
         "--sequence", sequence,
-        "--check"
+        "--delay", "0.3"
     ]
     
     try:

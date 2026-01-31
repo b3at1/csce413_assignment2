@@ -5,6 +5,7 @@ import argparse
 import logging
 import socket
 import time
+from os import subprocess
 
 DEFAULT_KNOCK_SEQUENCE = [1234, 5678, 9012]
 DEFAULT_PROTECTED_PORT = 2222
@@ -19,16 +20,26 @@ def setup_logging():
     )
 
 
-def open_protected_port(protected_port):
+def change_protected_port(protected_port, open=True):
     """Open the protected port using firewall rules."""
-    # TODO: Use iptables/nftables to allow access to protected_port.
-    logging.info("TODO: Open firewall for port %s", protected_port)
+    try:
+        # Command to insert a rule at the top of the INPUT chain
+        command = [
+            "iptables",
+            "-I", "INPUT",  # Use -I to insert at the beginning of the chain
+            "-p", "tcp",
+            "--dport", str(protected_port),
+            "-j", "ACCEPT" if open else "REJECT"
+        ]
+        
+        # Execute the command
+        subprocess.run(command, check=True, capture_output=True, text=True)
+        print(f"Port {protected_port} {'opened' if open else 'closed'}: {'allowing' if open else 'blocking'} incoming tcp traffic on port {protected_port}")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to execute iptables command: {e.stderr}")
+    except FileNotFoundError:
+        print("Error: iptables command not found. Ensure iptables is installed.")
 
-
-def close_protected_port(protected_port):
-    """Close the protected port using firewall rules."""
-    # TODO: Remove firewall rules for protected_port.
-    logging.info("TODO: Close firewall for port %s", protected_port)
 
 
 def listen_for_knocks(sequence, window_seconds, protected_port):
@@ -37,11 +48,12 @@ def listen_for_knocks(sequence, window_seconds, protected_port):
     logger.info("Listening for knocks: %s", sequence)
     logger.info("Protected port: %s", protected_port)
 
-    # TODO: Create UDP or TCP listeners for each knock port.
+    # TODO: Create TCP listeners for each knock port.
     # TODO: Track each source IP and its progress through the sequence.
     # TODO: Enforce timing window per sequence.
-    # TODO: On correct sequence, call open_protected_port().
-    # TODO: On incorrect sequence, reset progress.
+    # TODO: On correct sequence, call change_protected_port() to open the port.
+    # TODO: On incorrect sequence, reset progress
+    # TODO: On exit, ensure protected port is closed.
 
     while True:
         time.sleep(1)
