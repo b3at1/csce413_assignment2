@@ -1,0 +1,2 @@
+[+] Found 1 open ports
+Target: 172.20.0.21 | Port 8888: open (scanned in 0.5028 seconds) | Service: http
