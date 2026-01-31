@@ -113,6 +113,25 @@ Port knocking restricts access by keeping the SSH port closed until a specific s
 
 ### Limitations and Improvements
 Currently, the knocking ports reject connections rather than dropping packets, making them visible to scanners and potentially reducing the search space for an attacker. Security could be improved by configuring the firewall to silently drop packets, increasing the sequence complexity, and introducing dummy ports with randomized behavior to obfuscate the true knock sequence.
+
+## Honeypot
+### Architecture and Design
+I chose to implement a honeypot that emulates the secret_api service. It runs on the same port (8888) and has the same exact functions, but all user interactions are logged in and the sensitive api outputs are replaced with dummy data that attempts to convince an attacker that it is legitimate. The honeypot works exactly the same as `api.py` but has the added feature of calling `setup_logging` in logger.py which is then utilized to intercept and log every single request made to the honeypot.
+### Logging Mechanisms & Capabilities
+All requests have the timestamp, ip address, port, request type, and url logged. Additionally if the request contains a token (api_token) that gets logged as well. The idea is that if a legitimate token from the real API is used on the honeypot api, we know that the token has been compromised and can automatically revoke it so it cannot be abused in our real systems.
+### Analysis of Captured Attack
+Here is an example of a captured attack:
+```json
+{"timestamp": "2026-01-31T23:00:00.816470", "ip_address": "172.20.0.1", "port": 55900, "http_request_type": "GET", "url": "http://172.20.0.30:8888/flag", "api_token": null}
+172.20.0.1 - - [31/Jan/2026 23:00:00] "[31m[1mGET /flag HTTP/1.1[0m" 401 -
+{"timestamp": "2026-01-31T23:00:02.634680", "ip_address": "172.20.0.1", "port": 55916, "http_request_type": "GET", "url": "http://172.20.0.30:8888/", "api_token": null}
+172.20.0.1 - - [31/Jan/2026 23:00:02] "GET / HTTP/1.1" 200 -
+{"timestamp": "2026-01-31T23:00:08.357873", "ip_address": "172.20.0.1", "port": 57374, "http_request_type": "GET", "url": "http://172.20.0.30:8888/data", "api_token": null}
+172.20.0.1 - - [31/Jan/2026 23:00:08] "[31m[1mGET /data HTTP/1.1[0m" 401 -
+{"timestamp": "2026-01-31T23:00:15.088240", "ip_address": "172.20.0.1", "port": 57386, "http_request_type": "GET", "url": "http://172.20.0.30:8888/data?token=FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3}", "api_token": "FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3}"}
+172.20.0.1 - - [31/Jan/2026 23:00:15] "GET /data?token=FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3} HTTP/1.1" 200 -
+```
+As you can see in these logs, a simple IP attempted to access `/flag` without a token before making a few GET requests to the API directly. It then successfully accesses `/data` with a valid token. From this attack we can gleam that the attacker IP is an unwanted system since they're interacting with the honeypot. We also know that the api_token they used is compromised since legitimate users known not to interact with the honeypot.
 <div style="page-break-after: always;"></div>
 
 # 5. Remediation Recommendations
@@ -121,6 +140,6 @@ Currently, the knocking ports reject connections rather than dropping packets, m
 
 # 6. Conclusion
 ## Attributions
-Agentic AI (Gemini 3 Pro) was utilized to tweak and restructure scripts, additionally, the following chats were created:
+Agentic AI (Gemini 3 Pro) was utilized in Visual Studio Code to modify and restructure scripts as well as to debug. Additionally, the following external chats were utilized:
 https://gemini.google.com/share/8dcbdf405d14
 https://gemini.google.com/share/e0d2f0bb0b89
