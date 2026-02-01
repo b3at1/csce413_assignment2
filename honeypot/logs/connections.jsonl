@@ -7,3 +7,5 @@
 172.20.0.1 - - [31/Jan/2026 23:27:44] "GET / HTTP/1.1" 200 -
 {"timestamp": "2026-01-31T23:27:59.366958", "ip_address": "172.20.0.1", "port": 37842, "http_request_type": "GET", "url": "http://172.20.0.30:8888/data?token=FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3}", "api_token": "FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3}"}
 172.20.0.1 - - [31/Jan/2026 23:27:59] "GET /data?token=FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3} HTTP/1.1" 200 -
+{"timestamp": "2026-02-01T00:01:39.855825", "ip_address": "172.20.0.1", "port": 59280, "http_request_type": "GET", "url": "http://172.20.0.30:8888/data?token=FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3}", "api_token": "FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3}"}
+172.20.0.1 - - [01/Feb/2026 00:01:39] "GET /data?token=FLAG{n3tw0rk_tr4ff1c_1s_n0t_s3cur3} HTTP/1.1" 200 -

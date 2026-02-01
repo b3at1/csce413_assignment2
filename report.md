@@ -1,9 +1,9 @@
 # 1. Executive Summary
 #### Author: Sam Bederman
-## YT Video (TODO: ADD LINKS)
-PART 1:
-PART 2:
-PART 3:
+## YouTube Video
+PART 1: [Reconnaissance](https://www.youtube.com/watch?v=b78kM0wEON8) <br>
+PART 2: [MITM](https://youtu.be/b78kM0wEON8?t=179) <br>
+PART 3: [Security Fixes](https://youtu.be/b78kM0wEON8?t=394)<br>
 ## Overview
 In this assignment, I was engaged by CSCE-413 to develop network tooling, perform comprehensive reconnaissance, and conduct a network-based vulnerability assessment. My objectives included creating specialized tools to enhance the organization's security posture and providing strategic remediation for any identified weaknesses. The engagement was successful in uncovering numerous security flaws, which ultimately led to the discovery and capture of three specific flags during the exercise.
 
@@ -135,11 +135,47 @@ As you can see in these logs, a simple IP attempted to access `/flag` without a 
 <div style="page-break-after: always;"></div>
 
 # 5. Remediation Recommendations
+## How to fix the MITM vulnerability (TLS/SSL)
+The most effective remediation for the Man-in-the-Middle (MITM) vulnerability is enforcing HTTPS with strong TLS encryption (1.2+). By provisioning valid SSL/TLS certificates and disabling unencrypted HTTP traffic, sensitive data like API tokens is protected in transit. This prevents attackers from sniffing credentials from the wire, directly mitigating the "Use Alternate Authentication Material" vulnerability.
 
+## Best Practices for Hidden Services
+Security by obscurity is insufficient on its own. While port knocking obfuscates the SSH service, it is merely a defense-in-depth measure. Detailed scanning or timing analysis can still reveal hidden ports. Therefore, the primary focus must be on hardening the service itself by enforcing public key-based authentication and disabling password logins to prevent brute-force attacks.
+
+## Network Segmentation Strategies
+Network segmentation limits the blast radius of a breach by separating services into distinct subnets. Isolating the public-facing web app in a DMZ while keeping databases and internal APIs in a restricted backend subnet makes lateral movement significantly harder. Strict "allow-list" firewall rules should enforce this separation, permitting only essential inter-service traffic.
+
+## Monitoring and Detection Recommendations
+While the honeypot serves as a targeted alert system, comprehensive monitoring is required for the entire infrastructure. Host-based intrusion detection systems (HIDS) or agents like osquery and Sysmon should be deployed to capture process execution and network connections. Aggregating these logs into a SIEM allows for real-time anomaly detection and correlation of events across the environment.
 <div style="page-break-after: always;"></div>
 
 # 6. Conclusion
+## Lessons Learned
+The engagement provided valuable hands-on experience in both offensive and defensive network security operations. The primary lessons and skills acquired include:
+- Tool Development: designing and implementing a custom threaded port scanner to identify open services across a subnet.
+- Reconnaissance: Mapping out attack surfaces and entry points using the custom network scanner.
+- Vulnerability Assessment: identifying critical network-based vulnerabilities, such as unencrypted traffic (MITM) and weak authentication mechanisms.
+- Exploit Chaining: demonstrating how seemingly minor vulnerabilities can be chained together (e.x. MITM --> Stolen Token --> Sensitive Data Access) to achieve system compromise.
+- Security via Obscurity: implementing security controls like port knocking to obscure critical services from automated scanners.
+- Active Defense: deploying honeypots to detect active threats and gathering threat intelligence on attacker behavior.
+
+## Future Work
+To further enhance the security posture of the network, the following improvements are recommended for future iterations:
+- Network Segmentation:
+  - Implement VLANs to isolate critical infrastructure from user workstations.
+  - Enforce micro-segmentation policies to restrict traffic between containers.
+- SIEM & Monitoring:
+  - Centralize logs from all services into a SIEM (e.g., ELK Stack, Splunk) for unified visibility.
+  - Deploy Network Intrusion Detection/Prevention Systems (NIDS/NIPS) like Snort or Suricata.
+- Honeypot Augmentation:
+  - Expand the honeypot infrastructure to emulate other high-value targets (e.x. database, ssh honeypots).
+  - Integrate automated alerting pipelines (email or slack) to notify SOC teams of breaches.
+- Authentication Hardening:
+  - Implement Multi-Factor Authentication (MFA) for all remote access services.
+  - Rotate API keys and secrets regularly using a secrets management vault.
+
 ## Attributions
 Agentic AI (Gemini 3 Pro) was utilized in Visual Studio Code to modify and restructure scripts as well as to debug. Additionally, the following external chats were utilized:
+<br>
 https://gemini.google.com/share/8dcbdf405d14
+<br>
 https://gemini.google.com/share/e0d2f0bb0b89
